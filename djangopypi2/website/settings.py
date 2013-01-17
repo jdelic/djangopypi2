@@ -77,7 +77,7 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.RemoteUserBackend',
+    'djangopypi2.auth.ProxyRemoteUserBackend',
 )
 
 ROOT_URLCONF = 'djangopypi2.website.urls'
