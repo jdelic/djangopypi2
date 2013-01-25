@@ -7,6 +7,7 @@ AVAILABLE_SETTINGS = [
     dict(name='TIME_ZONE'    , default='America/Chicago', type='timezone'),
     dict(name='WEB_ROOT'     , default='/'              , type='str'),
     dict(name='LANGUAGE_CODE', default='en-us'          , type='str'),
+    dict(name='SECRET_KEY'   , default=None             , type='str'),
 ]
 
 def _filename(project_root):
