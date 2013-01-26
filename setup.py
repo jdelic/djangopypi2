@@ -46,6 +46,7 @@ setup(
         'setuptools',
         'pkginfo',
         'docutils',
+        'net.maurus.djangohttpauth==1.0'
     ],
 
     setup_requires=[
