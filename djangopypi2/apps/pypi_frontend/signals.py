@@ -1,20 +1,24 @@
+import os
 import logging
 from django.db.models import signals
 from django.utils.hashcompat import md5_constructor
 from .models import Package, Release, Distribution
 
 log = logging.getLogger(__name__)
+from djangopypi.models import Package, Release, Distribution
+from djangopypi.settings import settings
+
 
 def autohide_new_release_handler(sender, instance, created, *args, **kwargs):
-    """ Autohide other releases on the creation of a new release when the 
+    """ Autohide other releases on the creation of a new release when the
     package 'auto-hide' is True"""
     if not created or not instance.package.auto_hide:
         return
-    
+
     for release in instance.package.releases.exclude(pk=instance.pk).filter(hidden=False):
         release.hidden = True
         release.save()
-    
+
     if instance.hidden:
         instance.hidden = False
         instance.save()
@@ -23,22 +27,22 @@ def autohide_save_release_handler(sender, instance, *args, **kwargs):
     """ When saving a release, check to see if it should be hidden or not """
     if instance.pk is None:
         return
-    
+
     if not instance.package.auto_hide:
         return
-    
+
     try:
         latest = instance.package.releases.latest('created')
     except Release.DoesNotExist:
         return
-    
+
     if instance != latest and not instance.hidden:
         instance.hidden = True
 
 def autohide_save_package_handler(sender, instance, *args, **kwargs):
     if not instance.auto_hide:
         return
-    
+
     for release in instance.releases.filter(hidden=False):
         release.save()
 
@@ -54,7 +58,15 @@ def distribution_hash(sender, instance, *args, **kwargs):
         except Exception:
             log.exception("Error calculating hash")
 
+def cleanup_dist_files(sender, instance, *args, **kwargs):
+    if settings.DJANGOPYPI_CLEANUP_FILES and instance.content:
+        try:
+            os.unlink(instance.content.path)
+        except OSError:
+            log.exception("Cannot clean up %s" % (instance.content.path))
+
 signals.post_save.connect(autohide_new_release_handler, sender=Release)
 signals.pre_save.connect(autohide_save_release_handler, sender=Release)
 signals.pre_save.connect(autohide_save_package_handler, sender=Package)
 signals.post_save.connect(distribution_hash, sender=Distribution)
+signals.post_delete.connect(cleanup_dist_files, sender=Distribution)

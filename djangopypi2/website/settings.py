@@ -33,6 +33,13 @@ ADMINS = USER_SETTINGS['ADMINS']
 TIME_ZONE = USER_SETTINGS['TIME_ZONE']
 LANGUAGE_CODE = USER_SETTINGS['LANGUAGE_CODE']
 
+""" Should we delete files when their Distribution object is removed from the
+database? If using a non-standard file backend such as S3, this should not be
+used, since the current implementation uses a naive os.unlink post-delete
+signal handler. """
+DJANGOPYPI_CLEANUP_FILES = False
+
+
 MANAGERS = ADMINS
 
 DATABASES = {
