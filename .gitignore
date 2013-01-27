@@ -1,5 +1,6 @@
 *.DS_Store
 *.pyc
+*.pyd
 *~
 .*.sw[po]
 *.kpf
@@ -7,3 +8,8 @@
 /build/
 /*.egg-info
 /setuptools*
+*.iml
+.project
+.settings
+.pydevproject
+.idea
