@@ -3,6 +3,7 @@ import sys
 import errno
 from . import user_settings
 
+
 def ensure_directory(path):
     try:
         os.makedirs(path)
@@ -73,6 +74,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'djangohttpauth.ProxyRemoteUserMiddleware',
+    'django.middleware.transaction.TransactionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
@@ -113,7 +115,7 @@ INSTALLED_APPS = (
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,
     'filters': {
         'require_debug_false': {
             '()': 'django.utils.log.RequireDebugFalse'
@@ -124,7 +126,13 @@ LOGGING = {
             'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'strm': sys.stdout,
+            'stream': sys.stdout,
+        },
     },
     'loggers': {
         'django.request': {
@@ -132,6 +140,10 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG'
+        }
     }
 }
 
