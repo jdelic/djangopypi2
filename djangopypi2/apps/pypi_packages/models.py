@@ -149,10 +149,19 @@ def distribution_upload_path(instance, filename):
     configuration = Configuration.objects.latest()
     return os.path.join(str(configuration.upload_directory), filename)
 
+
+_storage = None
+if getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
+    from storages.backends.overwrite import OverwriteStorage
+    _storage = OverwriteStorage()
+else:
+    from django.core.files.storage import FileSystemStorage
+    _storage = FileSystemStorage()
+
 class Distribution(models.Model):
     release = models.ForeignKey(Release, related_name="distributions",
                                 editable=False)
-    content = models.FileField(upload_to=distribution_upload_path)
+    content = models.FileField(upload_to=distribution_upload_path, storage=_storage)
     md5_digest = models.CharField(max_length=32, blank=True, editable=False)
     filetype = models.ForeignKey(DistributionType, related_name='distributions')
     pyversion = models.ForeignKey(PythonVersion, related_name='distributions', null=True,

@@ -98,30 +98,34 @@ def _apply_metadata(request, release):
     if not metadata_version in METADATA_VERSIONS:
         raise BadRequest('Metadata version must be present and one of: %s' % (', '.join(METADATA_VERSIONS.keys()), ))
 
-    if (('classifiers' in request.POST or 'download_url' in request.POST) and 
+    if (('classifiers' in request.POST or 'download_url' in request.POST) and
         metadata_version == '1.0'):
         metadata_version = '1.1'
-    
+
     release.metadata_version = metadata_version
-    
+
     fields = METADATA_VERSIONS[metadata_version]
-    
+
     if 'classifiers' in request.POST:
         request.POST.setlist('classifier',request.POST.getlist('classifiers'))
-    
+
     release.package_info = MultiValueDict(dict(filter(lambda t: t[0] in fields,
                                                       request.POST.iterlists())))
-    
+
     for key, value in release.package_info.iterlists():
         release.package_info.setlist(key,
                                      filter(lambda v: v != 'UNKNOWN', value))
-    
+
     release.save()
 
-def _detect_duplicate_upload(request, release, uploaded):
-    if any(os.path.basename(dist.content.name) == uploaded.name
-           for dist in release.distributions.all()):
-        raise BadRequest('That file has already been uploaded...')
+
+def _find_duplicate_upload(request, release, uploaded):
+    # we have to iterate through all dists because we can't filter for basename.
+    for dist in release.distributions.all():
+        if os.path.basename(dist.content.name) == uploaded.name:
+            return dist
+    return None
+
 
 def _get_distribution_type(request):
     filetype, created = DistributionType.objects.get_or_create(key=request.POST.get('filetype','sdist'))
@@ -130,8 +134,9 @@ def _get_distribution_type(request):
         filetype.save()
     return filetype
 
+
 def _get_python_version(request):
-    textual_pyversion = request.POST.get('pyversion','')
+    textual_pyversion = request.POST.get('pyversion', '')
     if textual_pyversion == '':
         pyversion = None
     else:
@@ -143,6 +148,7 @@ def _get_python_version(request):
         if created:
             pyversion.save()
     return pyversion
+
 
 def _deduce_platform_from_filename(uploaded):
     filename_mo = re.match(r'^(?P<package_name>[\w.]+)-(?P<version>[\w.]+)-py(?P<python_version>\d+\.\d+)-(?P<platform_key>[\w.-]+)$',
@@ -158,37 +164,59 @@ def _deduce_platform_from_filename(uploaded):
 
     return platform
 
+
 def _calculate_md5(request, uploaded):
     return request.POST.get('md5_digest', '')
+
 
 def _handle_uploads(request, release):
     if not 'content' in request.FILES:
         return 'release registered'
-    
-    uploaded = request.FILES.get('content')
-    _detect_duplicate_upload(request, release, uploaded)
 
-    new_file = Distribution.objects.create(
-        release    = release,
-        content    = uploaded,
-        filetype   = _get_distribution_type(request),
-        pyversion  = _get_python_version(request),
-        platform   = _deduce_platform_from_filename(uploaded),
-        uploader   = request.user,
-        comment    = request.POST.get('comment',''),
-        signature  = request.POST.get('gpg_signature',''),
-        md5_digest = _calculate_md5(request, uploaded),
-    )
+    uploaded = request.FILES.get('content')
+    existing = _find_duplicate_upload(request, release, uploaded)
+    if not getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
+        if existing:
+            raise BadRequest('That file has already been uploaded...')
+
+    if existing:
+        Distribution.objects.filter(id=existing.id).update(
+            release    = release,
+            content    = uploaded,
+            filetype   =_get_distribution_type(request),
+            pyversion  = _get_python_version(request),
+            platform   = _deduce_platform_from_filename(uploaded),
+            uploader   = request.user,
+            comment    = request.POST.get('comment', ''),
+            signature  = request.POST.get('gpg_signature', ''),
+            md5_digest = _calculate_md5(request, uploaded),
+        )
+
+        return 'upload accepted, previous version updated'
+    else:
+        Distribution.objects.create(
+            release    = release,
+            content    = uploaded,
+            filetype   = _get_distribution_type(request),
+            pyversion  = _get_python_version(request),
+            platform   = _deduce_platform_from_filename(uploaded),
+            uploader   = request.user,
+            comment    = request.POST.get('comment', ''),
+            signature  = request.POST.get('gpg_signature', ''),
+            md5_digest = _calculate_md5(request, uploaded),
+        )
 
     return 'upload accepted'
+
 
 def list_classifiers(request, mimetype='text/plain'):
     response = HttpResponse(mimetype=mimetype)
     response.write(u'\n'.join(map(lambda c: c.name,Classifier.objects.all())))
     return response
 
+
 ACTION_VIEWS = dict(
-    file_upload      = register_or_upload, #``sdist`` command
-    submit           = register_or_upload, #``register`` command
-    list_classifiers = list_classifiers, #``list_classifiers`` command
+    file_upload      = register_or_upload,  #``sdist`` command
+    submit           = register_or_upload,  #``register`` command
+    list_classifiers = list_classifiers,    #``list_classifiers`` command
 )

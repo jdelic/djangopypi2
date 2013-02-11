@@ -108,6 +108,7 @@ INSTALLED_APPS = (
     'djangopypi2.apps.pypi_packages',
     'djangopypi2.apps.pypi_frontend',
     'gunicorn',
+    'storages',
 )
 
 LOGGING = {
@@ -133,3 +134,5 @@ LOGGING = {
         },
     }
 }
+
+ALLOW_DISTRIBUTION_OVERWRITE = True
