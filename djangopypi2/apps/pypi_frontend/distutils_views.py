@@ -180,32 +180,22 @@ def _handle_uploads(request, release):
             raise BadRequest('That file has already been uploaded...')
 
     if existing:
-        Distribution.objects.filter(id=existing.id).update(
-            release    = release,
-            content    = uploaded,
-            filetype   =_get_distribution_type(request),
-            pyversion  = _get_python_version(request),
-            platform   = _deduce_platform_from_filename(uploaded),
-            uploader   = request.user,
-            comment    = request.POST.get('comment', ''),
-            signature  = request.POST.get('gpg_signature', ''),
-            md5_digest = _calculate_md5(request, uploaded),
-        )
+        existing.delete()
 
+    Distribution.objects.create(
+        release    = release,
+        content    = uploaded,
+        filetype   = _get_distribution_type(request),
+        pyversion  = _get_python_version(request),
+        platform   = _deduce_platform_from_filename(uploaded),
+        uploader   = request.user,
+        comment    = request.POST.get('comment', ''),
+        signature  = request.POST.get('gpg_signature', ''),
+        md5_digest = _calculate_md5(request, uploaded),
+    )
+
+    if existing:
         return 'upload accepted, previous version updated'
-    else:
-        Distribution.objects.create(
-            release    = release,
-            content    = uploaded,
-            filetype   = _get_distribution_type(request),
-            pyversion  = _get_python_version(request),
-            platform   = _deduce_platform_from_filename(uploaded),
-            uploader   = request.user,
-            comment    = request.POST.get('comment', ''),
-            signature  = request.POST.get('gpg_signature', ''),
-            md5_digest = _calculate_md5(request, uploaded),
-        )
-
     return 'upload accepted'
 
 
