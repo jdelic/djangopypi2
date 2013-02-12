@@ -40,8 +40,8 @@ def simple_index(request):
 
 
 def _mirror_if_not_found(proxy_folder):
-    @wraps(func)
     def decorator(func):
+        @wraps(func)
         def internal(request, package_name):
             try:
                 return func(request, package_name)
