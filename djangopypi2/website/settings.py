@@ -148,3 +148,4 @@ LOGGING = {
 }
 
 ALLOW_DISTRIBUTION_OVERWRITE = True
+PROXY_SITES = ['http://pypi.python.org/', ]

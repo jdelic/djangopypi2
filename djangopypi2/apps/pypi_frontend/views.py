@@ -1,3 +1,7 @@
+import logging
+
+from functools import wraps
+from django.conf import settings
 from django.http import Http404
 from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
@@ -8,9 +12,10 @@ from django.views.generic import list_detail
 from ..pypi_ui.shortcuts import render_to_response
 from ..pypi_packages.models import Package
 from ..pypi_packages.models import Release
-from .models import MirrorSite
 from . import xmlrpc_views
 from . import distutils_request
+
+LOG = logging.getLogger('djangopypi2.mirrors')
 
 @csrf_exempt
 def index(request):
@@ -24,6 +29,7 @@ def index(request):
 
     return HttpResponseRedirect(reverse('djangopypi2-packages-index'))
 
+
 def simple_index(request):
     return list_detail.object_list(
         request,
@@ -32,19 +38,22 @@ def simple_index(request):
         queryset             = Package.objects.all(),
     )
 
+
 def _mirror_if_not_found(proxy_folder):
+    @wraps(func)
     def decorator(func):
         def internal(request, package_name):
             try:
                 return func(request, package_name)
             except Http404:
-                for mirror_site in MirrorSite.objects.filter(enabled=True):
-                    url = '/'.join([mirror_site.url.rstrip('/'), proxy_folder, package_name])
-                    mirror_site.logs.create(action='Redirect to ' + url)
+                for proxy_site in settings.PROXY_SITES:
+                    url = '/'.join([proxy_site.rstrip('/'), proxy_folder, package_name])
+                    LOG.info("Redirect to backend %s for %s" % (proxy_site, package_name,))
                     return HttpResponseRedirect(url)
             raise Http404(u'%s is not a registered package' % (package_name,))
         return internal
     return decorator
+
 
 @_mirror_if_not_found('simple')
 def simple_details(request, package_name):
@@ -60,10 +69,12 @@ def simple_details(request, package_name):
                               context_instance=RequestContext(request, dict(package=package)),
                               mimetype='text/html')
 
+
 @_mirror_if_not_found('pypi')
 def package_details(request, package_name):
     package = get_object_or_404(Package, name=package_name)
     return HttpResponseRedirect(package.get_absolute_url())
+
 
 @_mirror_if_not_found('pypi')
 def package_doap(request, package_name):
@@ -71,6 +82,7 @@ def package_doap(request, package_name):
     return render_to_response('pypi_frontend/package_doap.xml',
                               context_instance=RequestContext(request, dict(package=package)),
                               mimetype='text/xml')
+
 
 def release_doap(request, package_name, version):
     release = get_object_or_404(Release, package__name=package_name, version=version)

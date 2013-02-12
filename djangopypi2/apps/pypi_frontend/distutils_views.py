@@ -5,7 +5,6 @@ from logging import getLogger
 from django.conf import settings
 from django.db import transaction
 from django.http import *
-from django.utils.translation import ugettext_lazy as _
 from django.utils.datastructures import MultiValueDict
 from ..pypi_metadata.models import Classifier
 from ..pypi_metadata.models import DistributionType
@@ -15,16 +14,18 @@ from ..pypi_metadata.definitions import METADATA_VERSIONS
 from ..pypi_packages.models import Package
 from ..pypi_packages.models import Release
 from ..pypi_packages.models import Distribution
-from ..pypi_packages.forms import PackageForm, ReleaseForm
 from .basic_auth import basic_auth
 
 log = getLogger(__name__)
 
+
 class BadRequest(Exception):
     pass
 
+
 class Forbidden(Exception):
     pass
+
 
 @basic_auth
 @transaction.commit_manually
@@ -49,9 +50,11 @@ def register_or_upload(request):
     transaction.commit()
     return HttpResponse(response, 'text/plain')
 
+
 def _verify_post_request(request):
     if request.method != 'POST':
         raise BadRequest('Only post requests are supported')
+
 
 def _create_new_package(request, name):
     if Package.objects.filter(name__iexact=name).count():
@@ -64,6 +67,7 @@ def _create_new_package(request, name):
     package.save()
 
     return package
+
 
 def _get_package(request):
     name = request.POST.get('name',None).strip()
@@ -78,9 +82,11 @@ def _get_package(request):
 
     return package
 
+
 def _verify_credentials(request, package):
     if request.user not in itertools.chain(package.owners.all(), package.maintainers.all()):
         raise Forbidden('You are not an owner/maintainer of %s' % (package.name, ))
+
 
 def _get_release(request, package):
     version = request.POST.get('version', '').strip()
@@ -93,13 +99,14 @@ def _get_release(request, package):
 
     return release
 
+
 def _apply_metadata(request, release):
     metadata_version = request.POST.get('metadata_version', '').strip()
     if not metadata_version in METADATA_VERSIONS:
         raise BadRequest('Metadata version must be present and one of: %s' % (', '.join(METADATA_VERSIONS.keys()), ))
 
     if (('classifiers' in request.POST or 'download_url' in request.POST) and
-        metadata_version == '1.0'):
+            metadata_version == '1.0'):
         metadata_version = '1.1'
 
     release.metadata_version = metadata_version
@@ -119,16 +126,8 @@ def _apply_metadata(request, release):
     release.save()
 
 
-def _find_duplicate_upload(request, release, uploaded):
-    # we have to iterate through all dists because we can't filter for basename.
-    for dist in release.distributions.all():
-        if os.path.basename(dist.content.name) == uploaded.name:
-            return dist
-    return None
-
-
 def _get_distribution_type(request):
-    filetype, created = DistributionType.objects.get_or_create(key=request.POST.get('filetype','sdist'))
+    filetype, created = DistributionType.objects.get_or_create(key=request.POST.get('filetype', 'sdist'))
     if created:
         filetype.name = filetype.key
         filetype.save()
@@ -174,13 +173,15 @@ def _handle_uploads(request, release):
         return 'release registered'
 
     uploaded = request.FILES.get('content')
-    existing = _find_duplicate_upload(request, release, uploaded)
-    if not getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
-        if existing:
-            raise BadRequest('That file has already been uploaded...')
 
-    if existing:
+    # we have to iterate through all dists because we can't filter for basename.
+    existing = release.distributions.filter(content__iendswith=uploaded.name)
+    if existing.count() > 1:
+        raise BadRequest('This file upload returned %s candidates for updates (more than 1)' % existing.count())
+    elif existing.count() == 1 and getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
         existing.delete()
+    elif existing.count() == 1 and not getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
+        raise BadRequest('That file has already been uploaded...')
 
     Distribution.objects.create(
         release    = release,
@@ -201,12 +202,12 @@ def _handle_uploads(request, release):
 
 def list_classifiers(request, mimetype='text/plain'):
     response = HttpResponse(mimetype=mimetype)
-    response.write(u'\n'.join(map(lambda c: c.name,Classifier.objects.all())))
+    response.write(u'\n'.join(map(lambda c: c.name, Classifier.objects.all())))
     return response
 
 
 ACTION_VIEWS = dict(
-    file_upload      = register_or_upload,  #``sdist`` command
-    submit           = register_or_upload,  #``register`` command
-    list_classifiers = list_classifiers,    #``list_classifiers`` command
+    file_upload      = register_or_upload,  # ``sdist`` command
+    submit           = register_or_upload,  # ``register`` command
+    list_classifiers = list_classifiers,    # ``list_classifiers`` command
 )
