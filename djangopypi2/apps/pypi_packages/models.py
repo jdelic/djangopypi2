@@ -9,6 +9,7 @@ from ..pypi_metadata.models import DistributionType
 from ..pypi_metadata.models import PythonVersion
 from ..pypi_metadata.models import PlatformName
 
+
 class ConfigurationManager(models.Manager):
     def latest(self):
         try:
@@ -17,6 +18,7 @@ class ConfigurationManager(models.Manager):
             configuration = Configuration()
             configuration.save()
             return configuration
+
 
 class Configuration(models.Model):
     '''Stores the configuration of this site. As a rule, the most
@@ -35,6 +37,7 @@ class Configuration(models.Model):
         verbose_name = _(u'Configuration')
         verbose_name_plural = _(u'Configurations')
         get_latest_by = 'timestamp'
+
 
 class PackageInfoField(models.Field):
     description = u'Python Package Information Field'
@@ -68,6 +71,7 @@ class PackageInfoField(models.Field):
 
     def get_internal_type(self):
         return 'TextField'
+
 
 class Package(models.Model):
     name = models.CharField(max_length=255, unique=True, primary_key=True,
@@ -105,6 +109,7 @@ class Package(models.Model):
             return self.releases.get(version=version)
         except Release.DoesNotExist:
             return None
+
 
 class Release(models.Model):
     package = models.ForeignKey(Package, related_name="releases", editable=False)
@@ -145,10 +150,10 @@ class Release(models.Model):
         return ('djangopypi2-release', (), {'package_name': self.package.name,
                                             'version': self.version})
 
+
 def distribution_upload_path(instance, filename):
     configuration = Configuration.objects.latest()
     return os.path.join(str(configuration.upload_directory), filename)
-
 
 _storage = None
 if getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
@@ -157,6 +162,7 @@ if getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
 else:
     from django.core.files.storage import FileSystemStorage
     _storage = FileSystemStorage()
+
 
 class Distribution(models.Model):
     release = models.ForeignKey(Release, related_name="distributions",
@@ -196,6 +202,7 @@ class Distribution(models.Model):
 
     def __unicode__(self):
         return self.filename
+
 
 class Review(models.Model):
     release = models.ForeignKey(Release, related_name="reviews")
