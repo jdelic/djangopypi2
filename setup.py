@@ -48,7 +48,7 @@ setup(
         'pkginfo',
         'docutils',
         'net.maurus.djangohttpauth==1.0',
-        'django-storages'
+        'django-storages',
     ],
 
     setup_requires=[

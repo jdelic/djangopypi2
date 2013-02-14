@@ -112,20 +112,10 @@ INSTALLED_APPS = (
     'storages',
 )
 
-try:
-    import gunicorn
-    INSTALLED_APPS += ('gunicorn',)
-except ImportError:
-    pass
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'handlers': {
-        'sentry': {
-            'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
-        },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
@@ -152,9 +142,27 @@ LOGGING = {
     },
     'root': {
         'level': 'DEBUG',
-        'handlers': ['console', 'sentry']
+        'handlers': ['console']
     },
 }
+
+RAVEN_CONFIG = {
+    'dsn': os.getenv("SENTRY_DSN", False),
+}
+
+try:
+    import gunicorn
+    INSTALLED_APPS += ('gunicorn',)
+    import raven
+    if RAVEN_CONFIG['dsn']:
+        INSTALLED_APPS += ('raven.contrib.django.raven_compat',)
+        LOGGING['handlers']['sentry'] = {
+            'level': 'WARNING',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
+        }
+        LOGGING['root']['handlers'].append('sentry')
+except ImportError:
+    pass
 
 ALLOW_DISTRIBUTION_OVERWRITE = True
 PROXY_SITES = ['http://pypi.python.org/', ]
