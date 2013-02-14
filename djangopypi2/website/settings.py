@@ -109,42 +109,51 @@ INSTALLED_APPS = (
     'djangopypi2.apps.pypi_metadata',
     'djangopypi2.apps.pypi_packages',
     'djangopypi2.apps.pypi_frontend',
-    'gunicorn',
     'storages',
 )
+
+try:
+    import gunicorn
+    INSTALLED_APPS += ('gunicorn',)
+except ImportError:
+    pass
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
     'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
+        'sentry': {
+            'level': 'WARNING',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
         },
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'strm': sys.stdout,
-            'stream': sys.stdout,
+            'stream': 'ext://sys.stderr',
+            'strm': 'ext://sys.stderr',
         },
     },
     'loggers': {
-        'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        '': {
+        'net.maurus.download': {
             'handlers': ['console'],
-            'level': 'DEBUG'
-        }
-    }
+            'level': 'DEBUG',
+            'propagate': True,
+            },
+        'sentry.errors': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+            },
+        'raven': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+            },
+    },
+    'root': {
+        'level': 'DEBUG',
+        'handlers': ['console', 'sentry']
+    },
 }
 
 ALLOW_DISTRIBUTION_OVERWRITE = True

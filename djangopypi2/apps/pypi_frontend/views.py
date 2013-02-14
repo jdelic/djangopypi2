@@ -15,12 +15,16 @@ from ..pypi_packages.models import Release
 from . import xmlrpc_views
 from . import distutils_request
 
+
 LOG = logging.getLogger('djangopypi2.mirrors')
+
 
 @csrf_exempt
 def index(request):
-    """ Root view of the package index, handle incoming actions from distutils
-    or redirect to a more user friendly view """
+    """
+    Root view of the package index, handle incoming actions from distutils
+    or redirect to a more user friendly view
+    """
     if xmlrpc_views.is_xmlrpc_request(request):
         return xmlrpc_views.handle_xmlrpc_request(request)
 
