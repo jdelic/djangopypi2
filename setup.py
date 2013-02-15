@@ -43,11 +43,11 @@ setup(
     ],
 
     install_requires=[
-        'Django>=1,4,<1.5',
+        'Django>=1.4,<1.5',
         'setuptools',
         'pkginfo',
         'docutils',
-        'net.maurus.djangohttpauth==1.0',
+        'net.maurus.djangohttpauth==1.1',
         'django-storages',
     ],
 
