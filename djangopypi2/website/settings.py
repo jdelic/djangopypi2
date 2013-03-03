@@ -112,57 +112,9 @@ INSTALLED_APPS = (
     'storages',
 )
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': True,
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'stream': 'ext://sys.stderr',
-            'strm': 'ext://sys.stderr',
-        },
-    },
-    'loggers': {
-        'net.maurus.download': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'sentry.errors': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'raven': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-    'root': {
-        'level': 'DEBUG',
-        'handlers': ['console']
-    },
-}
-
-RAVEN_CONFIG = {
-    'dsn': os.getenv("SENTRY_DSN", False),
-}
-
-try:
-    import gunicorn
-    INSTALLED_APPS += ('gunicorn',)
-    import raven
-    if RAVEN_CONFIG['dsn']:
-        INSTALLED_APPS += ('raven.contrib.django.raven_compat',)
-        LOGGING['handlers']['sentry'] = {
-            'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler'
-        }
-        LOGGING['root']['handlers'].append('sentry')
-except ImportError:
-    pass
-
 ALLOW_DISTRIBUTION_OVERWRITE = True
 PROXY_SITES = ['http://pypi.python.org/', ]
+
+from maurusnet_settings.logging import LOGGING
+from maurusnet_settings import init_installed_apps
+INSTALLED_APPS += init_installed_apps()
