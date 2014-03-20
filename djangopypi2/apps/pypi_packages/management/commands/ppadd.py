@@ -19,6 +19,7 @@ from urlparse import urlsplit
 from setuptools.package_index import PackageIndex
 from django.contrib.auth.models import User
 from django.utils.datastructures import MultiValueDict
+from djangopypi2.apps.pypi_metadata.models import DistributionType
 from ....pypi_metadata.models import Classifier
 from ...models import Package
 from ...models import Release
@@ -108,10 +109,6 @@ added"""
         package.owners.add(owner)
         package.maintainers.add(owner)
 
-        for classifier in meta.classifiers:
-            package.classifiers.add(
-                    Classifier.objects.get_or_create(name=classifier)[0])
-
         release = Release()
         release.version = meta.version
         release.package = package
@@ -123,18 +120,21 @@ added"""
 
         file = File(open(path, "rb"))
         if isinstance(meta, pkginfo.SDist):
-            dist = 'sdist'
+            dist_key = 'sdist'
         elif meta.filename.endswith('.rmp') or meta.filename.endswith('.srmp'):
-            dist = 'bdist_rpm'
+            dist_key = 'bdist_rpm'
         elif meta.filename.endswith('.exe'):
-            dist = 'bdist_wininst'
+            dist_key = 'bdist_wininst'
         elif meta.filename.endswith('.egg'):
-            dist = 'bdist_egg'
+            dist_key = 'bdist_egg'
         elif meta.filename.endswith('.dmg'):
-            dist = 'bdist_dmg'
+            dist_key = 'bdist_dmg'
         else:
-            dist = 'bdist_dumb'
-        release.distributions.create(content=file, uploader=owner, filetype=dist)
+            dist_key = 'bdist_dumb'
+
+        dist_type = DistributionType.objects.get(key=dist_key)
+        release.distributions.create(content=file, uploader=owner,
+                                     filetype=dist_type)
         print "%s-%s added" % (meta.name, meta.version)
 
     def _get_meta(self, path):

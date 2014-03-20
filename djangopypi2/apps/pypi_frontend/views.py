@@ -4,7 +4,7 @@ from django.core.urlresolvers import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
 from django.template import RequestContext
-from django.views.generic import list_detail
+from django.views.generic.list import ListView
 from ..pypi_ui.shortcuts import render_to_response
 from ..pypi_packages.models import Package
 from ..pypi_packages.models import Release
@@ -24,13 +24,10 @@ def index(request):
 
     return HttpResponseRedirect(reverse('djangopypi2-packages-index'))
 
-def simple_index(request):
-    return list_detail.object_list(
-        request,
-        template_name        = 'pypi_frontend/package_list_simple.html',
-        template_object_name = 'package',
-        queryset             = Package.objects.all(),
-    )
+class SimpleIndex(ListView):
+    model = Package
+    template_name = 'pypi_frontend/package_list_simple.html'
+    context_object_name = 'packages'
 
 def _mirror_if_not_found(proxy_folder):
     def decorator(func):

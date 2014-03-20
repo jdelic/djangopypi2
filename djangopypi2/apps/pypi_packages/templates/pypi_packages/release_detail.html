@@ -5,13 +5,40 @@
 {% block title %}{{ release }}{% endblock %}
 {% block extra_head %}
 <link rel="meta" title="DOAP" type="application/rdf+xml"
-      href="{% url djangopypi2-pypi-release-doap package_name=release.package.name version=release.version %}">
+      href="{% url 'djangopypi2-pypi-release-doap' package_name=release.package.name version=release.version %}">
 {% endblock %}
 
 {% block content %}
 <h1>
   {{ release }}
-  <a href="{% url djangopypi2-pypi-release-doap package_name=release.package.name version=release.version %}"><img src="{% static "img/xml-icon.svg" %}"></a>
+  <span class="btn-group pull-right">
+    <button class="btn dropdown-toggle" data-toggle="dropdown">More <span class="caret"></span></button>
+    <ul class="dropdown-menu">
+      <li>
+        <a href="{% url 'djangopypi2-pypi-release-doap' package_name=release.package.name version=release.version %}"><i class="icon-tags">&nbsp;</i> DOAP XML</a>
+      </li>
+      {% if request.user.is_authenticated %}
+      <li class="divider"></li>
+      <li>
+        <a href="{% url 'djangopypi2-release-edit-details' package_name=release.package.name version=release.version %}"><i class="icon-pencil">&nbsp;</i> Edit Details</a>
+      </li>
+      <li>
+        <a href="{% url 'djangopypi2-release-edit-metadata' package_name=release.package.name version=release.version %}"><i class="icon-pencil">&nbsp;</i> Edit Metadata</a>
+      </li>
+      <li class="divider"></li>
+      <li>
+        <a href="{% url 'djangopypi2-release-manage-files' package_name=release.package.name version=release.version %}"><i class="icon-file">&nbsp;</i> Manage Files</a>
+      </li>
+      <li>
+        <a href="{% url 'djangopypi2-release-upload-file' package_name=release.package.name version=release.version %}"><i class="icon-upload">&nbsp;</i> Upload File</a>
+      </li>
+      <li class="divider"></li>
+      <li>
+        <a href="{% url 'djangopypi2-release-delete' package_name=release.package.name version=release.version %}"><i class="icon-trash">&nbsp;</i> Delete</a>
+      </li>
+      {% endif %}
+    </ul>
+  </span>
 </h1>
 <p class="lead">{{ release.summary }}</p>
 
@@ -23,22 +50,12 @@
 </div>
 {% endifnotequal %}
 
-<div class="row">
-  <span class="span8">
-    <div class="well well-small">
-      {% if release.description %}
-      {{ release.description|saferst }}
-      {% else %}
-      <i>This package has no description</i>
-      {% endif %}
-    </div>
-  </span>
-
-  <span class="span4">
-    {% for classifier in release.classifiers %}
-    <span class="label label-success">{{ classifier }}</span><br>
-    {% endfor %}
-  </span>
+<div class="well well-small">
+    {% if release.description %}
+    {{ release.description|saferst }}
+    {% else %}
+    <i>This package has no description</i>
+    {% endif %}
 </div>
 
 <div class="row">
@@ -83,4 +100,21 @@
     {% endif %}
   </span>
 </div>
+
+<h2>Other Information</h2>
+<ul class="unstyled">
+    <li><strong>Author:</strong> {{ release.author }}</li>
+    <li><strong>Home page:</strong> <a href="{{ release.home_page }}"> {{ release.home_page }} </a></li>
+    <li><strong>Keywords:</strong> {{ release.keywords|join:" " }}</li>
+    <li><strong>License:</strong> {{ release.license }}</li>
+    <li><strong>Classifiers:</strong>
+        <ul>
+            {% for classifier in release.classifiers %}
+            <span class="label label-success">{{ classifier }}</span><br>
+            {% endfor %}
+        </ul>
+    </li>
+    <li><strong>Package owners:</strong> {{ release.package.owners.all|join:", " }}</li>
+</ul>
+
 {% endblock %}

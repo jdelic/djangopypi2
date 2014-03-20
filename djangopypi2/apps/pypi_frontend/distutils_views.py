@@ -15,7 +15,6 @@ from ..pypi_metadata.definitions import METADATA_VERSIONS
 from ..pypi_packages.models import Package
 from ..pypi_packages.models import Release
 from ..pypi_packages.models import Distribution
-from ..pypi_packages.forms import PackageForm, ReleaseForm
 from .basic_auth import basic_auth
 
 log = getLogger(__name__)
@@ -37,12 +36,15 @@ def register_or_upload(request):
         _apply_metadata(request, release)
         response = _handle_uploads(request, release)
     except BadRequest, error:
+        log.error(error)
         transaction.rollback()
         return HttpResponseBadRequest(str(error), 'text/plain')
     except Forbidden, error:
+        log.error(error)
         transaction.rollback()
         return HttpResponseForbidden(str(error), 'text/plain')
     except Exception, error:
+        log.error(Exception)
         transaction.rollback()
         raise
 
@@ -119,9 +121,18 @@ def _apply_metadata(request, release):
     release.save()
 
 def _detect_duplicate_upload(request, release, uploaded):
-    if any(os.path.basename(dist.content.name) == uploaded.name
-           for dist in release.distributions.all()):
-        raise BadRequest('That file has already been uploaded...')
+    duplicate = False
+    version = request.POST.get('version', '').strip()
+    allowed = settings.ALLOW_VERSION_OVERWRITE
+    if allowed:
+        allowed = re.search(settings.ALLOW_VERSION_OVERWRITE, version)
+    for dist in release.distributions.all():
+        if os.path.basename(dist.content.name) == uploaded.name:
+            if allowed:
+                duplicate = dist
+            else:
+                raise BadRequest('File {} not allowed to be uploaded more than once'.format(uploaded.name))
+    return duplicate
 
 def _get_distribution_type(request):
     filetype, created = DistributionType.objects.get_or_create(key=request.POST.get('filetype','sdist'))
@@ -166,7 +177,11 @@ def _handle_uploads(request, release):
         return 'release registered'
     
     uploaded = request.FILES.get('content')
-    _detect_duplicate_upload(request, release, uploaded)
+
+    duplicate = _detect_duplicate_upload(request, release, uploaded)
+    if duplicate:
+        log.info("Deleting duplicate distribution {}".format(duplicate))
+        duplicate.delete()
 
     new_file = Distribution.objects.create(
         release    = release,

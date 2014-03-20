@@ -4,17 +4,26 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from ..pypi_metadata.definitions import METADATA_VERSIONS
+from ..pypi_metadata.models import Classifier
 from .models import Package, Release, Distribution
 
 log = logging.getLogger(__name__)
 
-class SimplePackageSearchForm(forms.Form):
-    query = forms.CharField(max_length=255)
+class SearchCharField(forms.CharField):
+    def __init__(self, **options):
+        super(SearchCharField, self).__init__(**options)
+        self.widget.attrs['class'] = 'search-query'
+        self.widget.attrs['placeholder'] = 'Search'
 
-class PackageForm(forms.ModelForm):
-    class Meta:
-        model = Package
-        exclude = ['name']
+class SimplePackageSearchForm(forms.Form):
+    query = SearchCharField(max_length=255)
+
+class AdvancedPackageSearchForm(forms.Form):
+    name = forms.CharField(required = False, label = 'Name', max_length = 255)
+    summary = forms.CharField(required = False, label = 'Summary', max_length = 255)
+    description = forms.CharField(required = False, label = 'Description', max_length = 255)
+    classifier = forms.ModelMultipleChoiceField(required=False, label = 'Classifiers', queryset=Classifier.objects.all(), widget = forms.SelectMultiple(attrs = {'size': 15}))
+    keywords = forms.CharField(required=False, label = 'Keywords', help_text = 'Space-separated words')
 
 class DistributionUploadForm(forms.ModelForm):
     class Meta:

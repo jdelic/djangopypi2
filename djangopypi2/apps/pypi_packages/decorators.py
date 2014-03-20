@@ -24,9 +24,9 @@ def user_owns_package(login_url=None, redirect_field_name=REDIRECT_FIELD_NAME):
     
     def decorator(view_func):
         def _wrapped_view(request, package_name, *args, **kwargs):
-            if request.user.packages_owned.filter(name=package_name).count() > 0:
+            if (request.user.is_authenticated() and
+                request.user.packages_owned.filter(name=package_name).count() > 0):
                 return view_func(request, package_name=package_name, *args, **kwargs)
-
             path = urlquote(request.get_full_path())
             tup = login_url, redirect_field_name, path
             return HttpResponseRedirect('%s?%s=%s' % tup)
@@ -46,9 +46,8 @@ def user_maintains_package(login_url=None, redirect_field_name=REDIRECT_FIELD_NA
         def _wrapped_view(request, package_name, *args, **kwargs):
             if (request.user.is_authenticated() and
                 (request.user.packages_owned.filter(name=package_name).count() > 0 or
-                 request.user.packages_maintained.filter(name=package_name).count() > 0)):
+                request.user.packages_maintained.filter(name=package_name).count() > 0)):
                 return view_func(request, package_name=package_name, *args, **kwargs)
-
             path = urlquote(request.get_full_path())
             tup = login_url, redirect_field_name, path
             return HttpResponseRedirect('%s?%s=%s' % tup)

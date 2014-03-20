@@ -1,6 +1,11 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
+def ClassifierSerializer(o):
+    if isinstance(o, Classifier):
+        return o.name
+    return o
+
 class Classifier(models.Model):
     name = models.CharField(max_length=255, primary_key=True)
 
