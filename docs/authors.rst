@@ -24,6 +24,13 @@ Full list of contributors
 * David Miller <david@deadpansincerity.com>
 * Tomasz Wysocki
 * Zohar Zilberman <popen2@gmail.com>
+* Toby Champion <toby@tobychampion.com>
+* Edward Easton <eeaston@gmail.com>
+* Guilherme Souza <guivideojob@gmail.com>
+* Julien Rottenberg <julien@rottenberg.info>
+* Marcus Cobden <marcus@marcuscobden.co.uk>
+* Heryandi <heryandi@gmail.com>
+* EisenSheng <eisensheng@gmail.com>
 
 External libraries or resources
 -------------------------------

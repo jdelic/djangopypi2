@@ -1,13 +1,23 @@
 import os
+import json
+from logging import getLogger
+
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import post_delete
+from django.db.models.query import Q
 from django.utils.translation import ugettext_lazy as _
-from django.utils import simplejson as json
 from django.utils.datastructures import MultiValueDict
 from django.contrib.auth.models import User
+from django.dispatch import receiver
+
+from ..pypi_metadata.models import Classifier, ClassifierSerializer
 from ..pypi_metadata.models import DistributionType
 from ..pypi_metadata.models import PythonVersion
 from ..pypi_metadata.models import PlatformName
+
+
+log = getLogger(__name__)
 
 
 class ConfigurationManager(models.Manager):
@@ -55,13 +65,13 @@ class PackageInfoField(models.Field):
                 return MultiValueDict()
         if isinstance(value, dict):
             return MultiValueDict(value)
-        if isinstance(value,MultiValueDict):
+        if isinstance(value, MultiValueDict):
             return value
         raise ValueError('Unexpected value encountered when converting data to python')
 
     def get_prep_value(self, value):
-        if isinstance(value,MultiValueDict):
-            return json.dumps(dict(value.iterlists()))
+        if isinstance(value, MultiValueDict):
+            return json.dumps(dict(value.iterlists()), default = ClassifierSerializer)
         if isinstance(value, dict):
             return json.dumps(value)
         if isinstance(value, basestring) or value is None:
@@ -110,6 +120,50 @@ class Package(models.Model):
         except Release.DoesNotExist:
             return None
 
+    @staticmethod
+    def simple_search(query = ""):
+        return Package.objects.filter(Q(name__icontains=query) | Q(releases__package_info__icontains=query)).distinct()
+
+    @staticmethod
+    def advanced_search(name = "", summary = "", description = "", classifier = None, keyword = None):
+        classifier = classifier if classifier is not None else set()
+        keyword = keyword if keyword is not None else set()
+
+        qset = Package.objects.all()
+        if name:
+            qset = qset.filter(name__icontains = name)
+
+        # manual filtering
+        evaled = False
+        if summary:
+            if not evaled:
+                qset = list(qset)
+            evaled = True
+            qset = filter(lambda x: all(y in x.latest.summary.lower() for y in summary.lower().split()), qset)
+        if description:
+            if not evaled:
+                qset = list(qset)
+            evaled = True
+            qset = filter(lambda x: all(y in x.latest.description.lower() for y in description.lower().split()), qset)
+        if classifier:
+            classifier = set(unicode(x) for x in classifier)
+            if not evaled:
+                qset = list(qset)
+            evaled = True
+            qset = filter(lambda x: set(x.latest.classifiers) & classifier == classifier, qset)
+        if keyword:
+            keyword = set(kword.lower() for kword in keyword)
+            if not evaled:
+                qset = list(qset)
+            evaled = True
+            qset = filter(lambda x: set(y.lower() for y in x.latest.keywords) & keyword == keyword, qset)
+
+        if not evaled:
+            result = list(qset)
+        else:
+            result = qset
+        return result
+
 
 class Release(models.Model):
     package = models.ForeignKey(Package, related_name="releases", editable=False)
@@ -138,6 +192,18 @@ class Release(models.Model):
         return self.package_info.get('summary', u'')
 
     @property
+    def author(self):
+        return self.package_info.get('author', u'')
+
+    @property
+    def home_page(self):
+        return self.package_info.get('home_page', u'')
+
+    @property
+    def license(self):
+        return self.package_info.get('license', u'')
+
+    @property
     def description(self):
         return self.package_info.get('description', u'')
 
@@ -145,10 +211,22 @@ class Release(models.Model):
     def classifiers(self):
         return self.package_info.getlist('classifier')
 
+    @property
+    def keywords(self):
+        # return keywords as set
+        keywords = self.package_info.getlist('keywords')
+        if keywords:
+            return set(self.package_info.getlist('keywords')[0].split())
+        else:
+            return set()
+
     @models.permalink
     def get_absolute_url(self):
         return ('djangopypi2-release', (), {'package_name': self.package.name,
                                             'version': self.version})
+    @staticmethod
+    def simple_search(name = "", summary = ""):
+        return Release.objects.filter(Q(package__name__icontains=name) | Q(package_info__icontains=summary)).distinct()
 
 
 def distribution_upload_path(instance, filename):
@@ -204,6 +282,13 @@ class Distribution(models.Model):
         return self.filename
 
 
+@receiver(post_delete, sender=Distribution)
+def handle_media_delete(instance, **kwargs):
+    path = os.path.join(settings.MEDIA_ROOT, instance.path)
+    log.info("Deleting file {}".format(path))
+    os.remove(path)
+
+
 class Review(models.Model):
     release = models.ForeignKey(Release, related_name="reviews")
     rating = models.PositiveSmallIntegerField(blank=True)
@@ -218,3 +303,4 @@ try:
     add_introspection_rules([], ["^djangopypi2\.apps\.pypi_frontend\.models\.PackageInfoField"])
 except ImportError:
     pass
+

@@ -11,7 +11,7 @@
     <th>Membership</th>
   </thead>
   <tbody>
-    {% for user in user_list %}
+    {% for user in users %}
     <tr>
       <td>
         <a href="{{ user.get_absolute_url }}">{{ user.username }}</a>

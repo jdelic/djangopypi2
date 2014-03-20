@@ -2,8 +2,10 @@ import logging
 import urlparse
 from django.conf.urls import patterns, include, url
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.views.static import serve as static_serve
 from django.contrib import admin
+from django.contrib.auth.views import logout
 admin.autodiscover()
 
 log = logging.getLogger(__name__)
@@ -27,4 +29,6 @@ def static_urls():
 urlpatterns = patterns('',
     url(r'^' + (settings.USER_SETTINGS['WEB_ROOT'].strip('/') + r'/'      ).lstrip('/'), include('djangopypi2.urls')),
     url(r'^' + (settings.USER_SETTINGS['WEB_ROOT'].strip('/') + r'/admin/').lstrip('/'), include(admin.site.urls)),
+    url(r'^' + (settings.USER_SETTINGS['WEB_ROOT'].strip('/') + r'/accounts/logout/$').lstrip('/'), logout, {'next_page': '/' + settings.USER_SETTINGS['WEB_ROOT'].strip('/')}, name = 'auth_logout'),
+    url(r'^' + (settings.USER_SETTINGS['WEB_ROOT'].strip('/') + r'/accounts/').lstrip('/'), include('registration.backends.default.urls')),
 ) + static_urls()

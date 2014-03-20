@@ -1,5 +1,27 @@
 History
 =======
+0.6.1 (2013-04-??)
+------------------
+* Apache+mod_wsgi documentation (thanks Julien Rottenberg <julien@rottenberg.info>)
+
+0.6.0 (2013-04-28)
+------------------
+* Upgrade to Twitter Bootstrap 2.3.1
+* Django 1.5 compatibility
+* Added 'delete' button to package and release
+* Added missing links to internal pages
+* Remove useless "empty" operations like editing a package
+
+0.5.9 (2013-04-14)
+------------------
+* Require Django 1.4.5; 1.5 is not yet supported
+
+0.5.8 (2013-03-05)
+------------------
+* Fix supervisor config so 'environment' works (thanks Toby Champion)
+* Distribution deletion now removes the underlying files (thanks Edward Easton)
+* Added ALLOW_VERSION_OVERWRITE user config (thanks Edward Easton)
+
 0.5.7 (2012-11-15)
 ------------------
 * Fix broken ``admin`` link

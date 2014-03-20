@@ -38,12 +38,15 @@ def register_or_upload(request):
         _apply_metadata(request, release)
         response = _handle_uploads(request, release)
     except BadRequest, error:
+        log.error(error)
         transaction.rollback()
         return HttpResponseBadRequest(str(error), 'text/plain')
     except Forbidden, error:
+        log.error(error)
         transaction.rollback()
         return HttpResponseForbidden(str(error), 'text/plain')
     except Exception, error:
+        log.error(Exception)
         transaction.rollback()
         raise
 
@@ -126,6 +129,21 @@ def _apply_metadata(request, release):
     release.save()
 
 
+def _detect_duplicate_upload(request, release, uploaded):
+    duplicate = False
+    version = request.POST.get('version', '').strip()
+    allowed = settings.ALLOW_VERSION_OVERWRITE
+    if allowed:
+        allowed = re.search(settings.ALLOW_VERSION_OVERWRITE, version)
+    for dist in release.distributions.all():
+        if os.path.basename(dist.content.name) == uploaded.name:
+            if allowed:
+                duplicate = dist
+            else:
+                raise BadRequest('File {} not allowed to be uploaded more than once'.format(uploaded.name))
+    return duplicate
+
+
 def _get_distribution_type(request):
     filetype, created = DistributionType.objects.get_or_create(key=request.POST.get('filetype', 'sdist'))
     if created:
@@ -174,6 +192,11 @@ def _handle_uploads(request, release):
 
     uploaded = request.FILES.get('content')
 
+    duplicate = _detect_duplicate_upload(request, release, uploaded)
+    if duplicate:
+        log.info("Deleting duplicate distribution {}".format(duplicate))
+        duplicate.delete()
+
     # we have to iterate through all dists because we can't filter for basename.
     existing = release.distributions.filter(content__iendswith=uploaded.name)
     if existing.count() > 1:
@@ -183,7 +206,7 @@ def _handle_uploads(request, release):
     elif existing.count() == 1 and not getattr(settings, 'ALLOW_DISTRIBUTION_OVERWRITE', False):
         raise BadRequest('That file has already been uploaded...')
 
-    Distribution.objects.create(
+    new_file = Distribution.objects.create(
         release    = release,
         content    = uploaded,
         filetype   = _get_distribution_type(request),

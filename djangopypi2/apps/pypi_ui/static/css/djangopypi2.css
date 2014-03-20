@@ -42,3 +42,23 @@ footer > div.container > div.row {
     color: #eee;
     padding: 2em 0;
 }
+
+.hidden {
+    display: none;
+}
+
+input {
+    width: 400px;
+}
+
+input.search-query {
+    width: 206px;
+}
+
+select {
+    width: 400px;
+}
+
+textarea {
+    width: 400px;
+}

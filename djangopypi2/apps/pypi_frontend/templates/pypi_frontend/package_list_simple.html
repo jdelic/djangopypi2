@@ -4,8 +4,8 @@
   </head>
   <body>
     <h1>All packages</h1>
-    {% for package in package_list %}
-    <a href="{% url djangopypi2-simple-package-info package_name=package.name %}">{{ package.name }}</a><br/>
+    {% for package in packages %}
+    <a href="{% url 'djangopypi2-simple-package-info' package_name=package.name %}">{{ package.name }}</a><br/>
     {% endfor %}
   </body>
 </html>
